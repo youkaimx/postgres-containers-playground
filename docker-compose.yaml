@@ -1,0 +1,55 @@
+
+
+
+
+
+name: postgres_example
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: my_user
+      POSTGRES_PASSWORD: very_secret_password
+      POSTGRES_DB: dvdrental
+    volumes:
+      - init_data:/docker-entrypoint-initdb.d
+      - data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+  pgadmin:
+    image: dpage/pgadmin4
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: my_user@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: very_secret_password
+      PGADMIN_DISABLE_POSTFIX: true
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+  app:
+    image: postgres_test
+    build:
+      dockerfile: src/Dockerfile
+    environment:
+      DB_DB: dvdrental
+      DB_USER: my_user
+      DB_PASS: very_secret_password
+      DB_HOST: postgres_example-db-1
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  data:
+    name: postgresql_data_volume
+  pgadmin_data:
+    name: pgadmin_data_volume
+  init_data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: ./data
